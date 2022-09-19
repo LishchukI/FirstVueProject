@@ -10,6 +10,7 @@
         >
           {{ message.text }}<br /><br />{{ message.dateTime }}<br />
           <button @click="deleteMessage(message)">Remove</button>
+          <button @click="updateMessage(message)">Update</button>
         </li>
       </ul>
     </div>
@@ -21,8 +22,6 @@
         v-model="nextDataText"
         @keypress.enter="createMessage"
       />
-      <input type="file" @change="uploadFile" ref="file"/>
-      <button @click="submitFile">Upload!</button>
       <button class="material-icons" @click="createMessage">send</button>
     </div>
   </div>
@@ -33,6 +32,9 @@ export default {
   name: "App",
   data: () => ({
     messages: [],
+    update: false,
+    nextDataText: "",
+    message: null,
   }),
   mounted() {
     fetch("http://localhost:52994/api/messages/getfirst").then((data) => {
@@ -44,50 +46,49 @@ export default {
   methods: {
     async createMessage() {
       if (this.nextDataText != "") {
-        const response = await fetch("http://localhost:52994/api/messages", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            text: this.nextDataText,
-            datetime: new Date().toJSON(),
-          }),
-        });
-        const data = await response.json();
-        this.messages.push(data);
-        this.nextDataText = "";
+        if (!this.update) {
+          const response = await fetch("http://localhost:52994/api/messages", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              text: this.nextDataText,
+              datetime: new Date(),
+            }),
+          });
+          const data = await response.json();
+          this.messages.push(data);
+          this.nextDataText = "";
+        } else {
+          await fetch("http://localhost:52994/api/messages", {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              id: this.message.id,
+              text: this.nextDataText,
+              datetime: new Date(),
+            }),
+          });
+          this.messages[this.messages.indexOf(this.message)].text = this.nextDataText;
+          this.message = null;
+          this.nextDataText = "";
+          this.update = false;
+        }
       }
     },
     async deleteMessage(message) {
-      await fetch("http://localhost:52994/api/messages/delete", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          id: message.id,
-          text: message.text,
-        }),
+      await fetch(`http://localhost:52994/api/messages/${message.id}`, {
+        method: "DELETE",
       });
-      console.log(this.messages.indexOf(message));
       this.messages.splice(this.messages.indexOf(message), 1);
     },
-    async uploadFile() {
-      this.Images = this.$refs.file.files[0];
-    },
-    async submitFile() {
-      const formData = new FormData();
-      formData.append("file", this.Images);
-      /*Тут далі реалізація відправки файлу. Так розумію це потрібно в моєму випадку скористуватись fetch("посилання, де реалізований функціонал з прикріпленням файлу"), того цей комент не убрав :)
-    const headers = { "Content-Type": "multipart/form-data" };
-    axios
-      .post("https://httpbin.org/post", formData, { headers })
-      .then((res) => {
-        res.data.files; // binary representation of the file
-        res.status; // HTTP status
-      });
-      */
+    async updateMessage(message) {
+      this.update = true;
+      this.message = message;
+      this.nextDataText = message.text;
     },
   },
 };

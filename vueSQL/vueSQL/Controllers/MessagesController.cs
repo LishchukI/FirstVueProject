@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using System;
 using System.Linq;
 using vueSQL.Models;
 
@@ -27,15 +28,24 @@ namespace vueSQL.Controllers
         [HttpPost]
         public IActionResult Post([FromBody] Message mess)
         {
+            mess.DateTime = DateTime.Now;
             messageDBContext.Messages.Add(mess);
             messageDBContext.SaveChanges();
             return Ok(mess);
         }
 
-        [HttpPost("delete")]
-        public IActionResult Delete([FromBody] Message mess)
+        [HttpDelete("{id}")]
+        public IActionResult Delete(int id)
         {
-            messageDBContext.Messages.Remove(mess);
+            Message message = messageDBContext.Messages.Where(x => x.Id == id).First();
+            messageDBContext.Messages.Remove(message);
+            messageDBContext.SaveChanges();
+            return Ok(id);
+        }
+        [HttpPut()]
+        public IActionResult Update([FromBody] Message mess)
+        {
+            messageDBContext.Messages.Update(mess);
             messageDBContext.SaveChanges();
             return Ok(mess);
         }
